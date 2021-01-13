@@ -29,7 +29,7 @@ type Label = String
 
 data Property
   = Class String
-  | Arrow String String
+  | Arrow String (Maybe String) (Maybe String)
   deriving (Show)
 
 data Tree = Node Label [Property] [Tree]
@@ -51,15 +51,22 @@ lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
 pProperty :: Parser Property
-pProperty = (symbol "arrow" >> (Arrow <$> lexeme parseQuoted <*> (fromMaybe "" <$> optional (lexeme parseQuoted))))
+pProperty = pArr
         <|> (Class <$> (symbol "class" >> pItem))
+  where
+  pArr :: Parser Property
+  pArr = L.indentBlock scn do
+    symbol "arrow"
+    targ <- pItem
+    pure $ L.IndentMany Nothing (pure . fulfill targ) pprop
+  pprop = (,) <$> lexeme (some alphaNumChar) <*> lexeme pItem
+  fulfill t items =
+    Arrow t (lookup "label" items) (lookup "class" items)
 
 pComplexItem :: Parser Tree
-pComplexItem = L.indentBlock scn p
-  where
-  p = do
-    header <- pItem
-    pure $ L.IndentMany Nothing (pure . xform header) pNodeMember
+pComplexItem = L.indentBlock scn do
+  header <- pItem
+  pure $ L.IndentMany Nothing (pure . xform header) pNodeMember
 
 pNodeMember :: Parser (Either Property Tree)
 pNodeMember = (Left <$> pProperty) <|> (Right <$> pComplexItem)
@@ -73,10 +80,8 @@ pItem :: Parser String
 pItem = lexeme $ some (alphaNumChar <|> char '-' <|> char ' ')
 
 pTop :: Parser Tree
-pTop = L.nonIndented scn (L.indentBlock scn p)
-  where
-  p = do
-    pure (L.IndentSome Nothing (pure . xform "Main") pNodeMember)
+pTop = L.nonIndented scn . L.indentBlock scn $ do
+  pure (L.IndentSome Nothing (pure . xform "Main") pNodeMember)
 
 parser :: Parser Tree
 parser = pComplexItem <* eof
@@ -96,11 +101,16 @@ treeHtml (Node label props subs) =
     Class c -> Just c
     _ -> Nothing
 
-arrows :: Tree -> [(T.Text, T.Text, T.Text)]
+arrows :: Tree -> [(T.Text, T.Text, T.Text, T.Text)]
 arrows (Node label props subs) = arrs ++ concatMap arrows subs
   where
   arrs = flip mapMaybe props \case
-    Arrow target lab -> Just (T.pack $ kebab label, T.pack $ kebab target, T.pack lab)
+    Arrow target lab klass ->
+      Just ( T.pack $ kebab label
+           , T.pack $ kebab target
+           , T.pack $ fromMaybe "" lab
+           , T.pack $ fromMaybe "" klass
+           )
     _ -> Nothing
 
 pageHtml :: Tree -> H.Html
@@ -119,7 +129,7 @@ function makeSVGEl(tag, attrs) {
     return el;
 }
 
-drawConnector = function(n, a, b, label) {
+drawConnector = function(n, a, b, label, klass) {
   var ao = $(a);
   var bo = $(b);
 
@@ -140,7 +150,7 @@ drawConnector = function(n, a, b, label) {
 
   var arrowpoints = `$${destx},$${desty} $${trix},$${desty + 5} $${trix},$${desty - 5}`;
 
-  var g = makeSVGEl("g", { });
+  var g = makeSVGEl("g", { class: klass });
   var line = makeSVGEl("polyline", { points: linepoints });
   var tri = makeSVGEl("polygon", { points: arrowpoints });
   var txt = makeSVGEl("text", {x: 200, y: 40});
@@ -166,13 +176,18 @@ drawArrows = function() {
 </svg>
         |] :: T.Text)
   conns :: T.Text
-  conns = T.concat $ map (\(n, (orig, targ, label)) -> let ns = T.pack (show n) in [text| drawConnector(${ns}, "#${orig}", "#${targ}", "${label}"); |]) (zip [0..] (arrows tree))
+  conns = T.concat $ map (\(n, (orig, targ, label, klass)) ->
+    let ns = T.pack (show n)
+    in [text| drawConnector(${ns}, "#${orig}", "#${targ}", "${label}", "${klass}"); |]) (zip [0..] (arrows tree))
 
 main :: IO ()
 main = do
-  Right tree <- runParser parser "" <$> getContents
-  let html = renderHtml . H.docTypeHtml . pageHtml $ tree
-  B.writeFile "out.html" (toStrict html)
+  runParser parser "" <$> getContents >>= \case
+    Right tree -> do
+      let html = renderHtml . H.docTypeHtml . pageHtml $ tree
+      B.writeFile "out.html" (toStrict html)
+    Left e -> do
+      putStr $ show e
 
 parseQuoted :: Parser String
 parseQuoted = do

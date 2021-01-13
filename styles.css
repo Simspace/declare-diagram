@@ -102,3 +102,7 @@ li {
   fill: black;
   stroke: black;
 }
+
+.dotted polyline {
+  stroke-dasharray: 2;
+}
