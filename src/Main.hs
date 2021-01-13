@@ -51,7 +51,7 @@ pageHtml tree =
       H.script H.! A.src "https://code.jquery.com/jquery-latest.min.js" $ pure ()
       H.script do
         H.text $ [text|
-function makeSVGEl(tag, attrs) {
+mkSVGEl = function (tag, attrs) {
     var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
     for (var k in attrs) {
       el.setAttribute(k, attrs[k]);
@@ -80,10 +80,10 @@ drawConnector = function(n, a, b, label, klass) {
 
   var arrowpoints = `$${destx},$${desty} $${trix},$${desty + 5} $${trix},$${desty - 5}`;
 
-  var g = makeSVGEl("g", { class: klass });
-  var line = makeSVGEl("polyline", { points: linepoints });
-  var tri = makeSVGEl("polygon", { points: arrowpoints });
-  var txt = makeSVGEl("text", {x: 200, y: 40});
+  var g    = mkSVGEl("g", { class: klass });
+  var line = mkSVGEl("polyline", { points: linepoints });
+  var tri  = mkSVGEl("polygon", { points: arrowpoints });
+  var txt  = mkSVGEl("text", {x: 200, y: 40});
   $(txt).text(label);
 
   g.appendChild(line);
