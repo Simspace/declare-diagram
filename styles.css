@@ -3,7 +3,7 @@ body {
 }
 
 .node .node {
-  border-right: 1px solid black;
+  border-left: 1px solid black;
   font-size: 1em;
 }
 
@@ -32,6 +32,11 @@ p {
   display: flex;
   flex-direction: column;
 }
+
+.cols > ul > li {
+  margin: 1em 3em;
+}
+
 .cols > ul {
   display: flex;
   flex-direction: row;

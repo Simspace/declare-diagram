@@ -72,7 +72,7 @@ drawConnector = function(n, a, b, label, klass) {
   }
   var desty = bo.offset().top + bo.height()/2;
 
-  var outx = origx + 35 + 5 * n;
+  var outx = origx + 43 + 6 * n;
 
   var trix = ((origx < destx) ? destx - 10 : destx + 6);
 
