@@ -15,6 +15,16 @@ dependencies:
 
 default-extensions:
 - BlockArguments
+- TupleSections
+- OverloadedStrings
+- LambdaCase
+- QuasiQuotes
+- ScopedTypeVariables
+
+ghc-options:
+  - -Wall
+  - -fwarn-tabs
+  - -Wincomplete-uni-patterns
 
 executables:
   render-diagrams-exe:

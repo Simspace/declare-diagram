@@ -1,97 +1,27 @@
-{-# LANGUAGE TupleSections, OverloadedStrings, LambdaCase, QuasiQuotes, BlockArguments, ScopedTypeVariables #-}
-
 module Main where
 
-import Control.Applicative (empty)
-import Control.Monad (void, when)
-import Control.Monad.Combinators (optional)
+import Control.Monad (when)
 import Data.ByteString.Lazy (toStrict)
-import Data.Either (partitionEithers)
 import Data.Foldable (traverse_)
-import Data.List (foldl', intercalate)
+import Data.List (intercalate)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.String (fromString)
-import Data.Void (Void)
 import NeatInterpolation (text)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 import Text.Casing (kebab)
 import Text.Megaparsec
-import Text.Megaparsec.Char
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import qualified Text.Megaparsec.Char.Lexer as L
-
-type Parser = Parsec Void String
-
-type Label = String
-
-data Property
-  = Class String
-  | Arrow String (Maybe String) (Maybe String)
-  deriving (Show)
-
-data Tree = Node Label [Property] [Tree]
-  deriving (Show)
-
-lineComment :: Parser ()
-lineComment = L.skipLineComment "#"
-
-scn :: Parser ()
-scn = L.space (void spaceChar) lineComment empty
-
-sc :: Parser ()
-sc = L.space (void $ oneOf (" \t" :: String)) lineComment empty
-
-symbol :: Tokens String -> Parser (Tokens String)
-symbol = L.symbol (void $ oneOf (" \t" :: String))
-
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme sc
-
-pProperty :: Parser Property
-pProperty = pArr
-        <|> (Class <$> (symbol "class" >> pItem))
-  where
-  pArr :: Parser Property
-  pArr = L.indentBlock scn do
-    symbol "arrow"
-    targ <- pItem
-    pure $ L.IndentMany Nothing (pure . fulfill targ) pprop
-  pprop = (,) <$> lexeme (some alphaNumChar) <*> lexeme pItem
-  fulfill t items =
-    Arrow t (lookup "label" items) (lookup "class" items)
-
-pComplexItem :: Parser Tree
-pComplexItem = L.indentBlock scn do
-  header <- pItem
-  pure $ L.IndentMany Nothing (pure . xform header) pNodeMember
-
-pNodeMember :: Parser (Either Property Tree)
-pNodeMember = (Left <$> pProperty) <|> (Right <$> pComplexItem)
-
-xform :: Label -> [Either Property Tree] -> Tree
-xform h es = Node h ps ts
-  where
-  (ps,ts) = partitionEithers es
-
-pItem :: Parser String
-pItem = lexeme $ some (alphaNumChar <|> char '-' <|> char ' ')
-
-pTop :: Parser Tree
-pTop = L.nonIndented scn . L.indentBlock scn $ do
-  pure (L.IndentSome Nothing (pure . xform "Main") pNodeMember)
-
-parser :: Parser Tree
-parser = pComplexItem <* eof
+import Parsing
 
 treeHtml :: Tree -> H.Html
-treeHtml (Node label props subs) =
-  H.div H.! A.id (fromString $ kebab label)
+treeHtml (Node labl props subs) =
+  H.div H.! A.id (fromString $ kebab labl)
         H.! A.class_ (fromString $ intercalate " " ("node" : classes))
     $ do
-    H.p $ H.text (T.pack label)
+    H.p $ H.text (T.pack labl)
     when (not . null $ subs) $
       H.ul $
         traverse_ (H.li . treeHtml) subs
@@ -102,11 +32,11 @@ treeHtml (Node label props subs) =
     _ -> Nothing
 
 arrows :: Tree -> [(T.Text, T.Text, T.Text, T.Text)]
-arrows (Node label props subs) = arrs ++ concatMap arrows subs
+arrows (Node labl props subs) = arrs ++ concatMap arrows subs
   where
   arrs = flip mapMaybe props \case
     Arrow target lab klass ->
-      Just ( T.pack $ kebab label
+      Just ( T.pack $ kebab labl
            , T.pack $ kebab target
            , T.pack $ fromMaybe "" lab
            , T.pack $ fromMaybe "" klass
@@ -176,9 +106,9 @@ drawArrows = function() {
 </svg>
         |] :: T.Text)
   conns :: T.Text
-  conns = T.concat $ map (\(n, (orig, targ, label, klass)) ->
+  conns = T.concat $ map (\(n, (orig, targ, labl, klass)) ->
     let ns = T.pack (show n)
-    in [text| drawConnector(${ns}, "#${orig}", "#${targ}", "${label}", "${klass}"); |]) (zip [0..] (arrows tree))
+    in [text| drawConnector(${ns}, "#${orig}", "#${targ}", "${labl}", "${klass}"); |]) (zip ([0..] :: [Int]) (arrows tree))
 
 main :: IO ()
 main = do
@@ -188,10 +118,3 @@ main = do
       B.writeFile "out.html" (toStrict html)
     Left e -> do
       putStr $ show e
-
-parseQuoted :: Parser String
-parseQuoted = do
-  char '"'
-  strings <- many $ noneOf ("\\\"" :: String)
-  char '"'
-  pure strings

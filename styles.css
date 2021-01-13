@@ -49,12 +49,10 @@ li {
 
 .compact li {
   margin: 0 1em;
-  /* border: none; */
 }
 
 .compact ul {
   margin: 1em 0;
-  /* border: 1px solid black; */
 }
 
 .compact li p {
