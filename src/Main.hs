@@ -59,9 +59,33 @@ mkSVGEl = function (tag, attrs) {
     return el;
 }
 
-drawConnector = function(n, a, b, label, klass) {
-  var ao = $(a);
-  var bo = $(b);
+var slots = {};
+
+// Hand out a sequence number for a node. These 'slot' numbers can be used to calculate an offset based
+// on the number of arrows going into or out of a node, or the number of arrows going through a column
+// The point of the suffix is so that arrows going 'up' or 'down' can share a 0th slot
+grabSlot = function(ident, suffix) {
+  var k = ident + '_' + suffix;
+
+  if (slots[ident]) {
+    if (slots[k]) {
+      slots[k] = slots[k] + 1;
+      return slots[k];
+    } else {
+      slots[k] = 1;
+      return slots[k];
+    }
+  }
+  else {
+    slots[ident] = true;
+    slots[k] = 0;
+    return slots[k];
+  }
+}
+
+drawArrow = function(a, b, label, klass) {
+  var ao = $('#' + a);
+  var bo = $('#' + b);
 
   var origx = ao.offset().left + ao.width();
   var origy = ao.offset().top + ao.height()/2;
@@ -72,14 +96,20 @@ drawConnector = function(n, a, b, label, klass) {
   }
   var desty = bo.offset().top + bo.height()/2;
 
+  var horizSlot = grabSlot(a, origy < desty ? 'down' : 'up');
+
+  var sloty = origy + horizSlot * 6 * (origy < desty ? 1 : -1);
+
   var colParent = ao.parents('.rows').last();
   var depthOffset = colParent.offset().left + colParent.width() - origx;
 
-  var outx = origx + 6 + 6 * n + (origx < destx ? 40 : 0) + depthOffset;
+  var vertSlot = grabSlot(colParent.attr('id'), 'singleton');
+
+  var outx = origx + 6 * 6 - 6 * vertSlot + (origx < destx ? 40 : 24) + depthOffset;
 
   var trix = (origx < destx ? destx - 10 : destx + 6);
 
-  var linepoints = `$${origx},$${origy} $${outx},$${origy} $${outx},$${desty} $${destx},$${desty}`;
+  var linepoints = `$${origx},$${sloty} $${outx},$${sloty} $${outx},$${desty} $${destx},$${desty}`;
 
   var arrowpoints = `$${destx},$${desty} $${trix},$${desty + 5} $${trix},$${desty - 5}`;
 
@@ -97,7 +127,26 @@ drawConnector = function(n, a, b, label, klass) {
 }
 
 drawArrows = function() {
+  var arrs = [];
   ${conns}
+
+  // We want to draw the arrows that go to a forward column first to minimize overlap
+  var forwards = []; //arrows that go to a later column
+  var sames = []; //arows that stay in the same column or earlier
+  arrs.forEach (function(x) {
+    if ($('#' + x[0]).offset().left < $('#' + x[1]).offset().left) {
+      forwards.push(x);
+    } else {
+      sames.push(x);
+    }
+  });
+
+  forwards.forEach(function (x) {
+    drawArrow(x[0], x[1], x[2], x[3]);
+  });
+  sames.forEach(function (x) {
+    drawArrow(x[0], x[1], x[2], x[3]);
+  });
 }
         |]
     H.body H.! A.onload "drawArrows()" $ do
@@ -109,9 +158,8 @@ drawArrows = function() {
 </svg>
         |] :: T.Text)
   conns :: T.Text
-  conns = T.concat $ map (\(n, (orig, targ, labl, klass)) ->
-    let ns = T.pack (show n)
-    in [text| drawConnector(${ns}, "#${orig}", "#${targ}", "${labl}", "${klass}"); |]) (zip ([0..] :: [Int]) (arrows tree))
+  conns = T.concat $ map (\(orig, targ, labl, klass) ->
+    [text| arrs.push(["${orig}", "${targ}", "${labl}", "${klass}"]); |]) (arrows tree)
 
 main :: IO ()
 main = do
