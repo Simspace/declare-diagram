@@ -83,6 +83,10 @@ grabSlot = function(ident, suffix) {
   }
 }
 
+// draw an arrow from one dom element to another
+// a and b are node ids
+// label is a message to display on hover
+// klass is a css class to add to the arrow element
 drawArrow = function(a, b, label, klass) {
   var ao = $('#' + a);
   var bo = $('#' + b);
@@ -124,8 +128,15 @@ drawArrow = function(a, b, label, klass) {
   g.appendChild(line);
   g.appendChild(tri);
   g.appendChild(txt);
+  var gel = $(g);
 
-  $(g).appendTo($("#svg"));
+  var colors = ['#962D40', '#AF4B47', '#C57544', '#888F41', '#61754A'];
+  var color = colors[Math.floor(Math.random() * colors.length)];
+
+  gel.css('stroke', color);
+  gel.children('polygon').css('fill', color);
+
+  gel.appendTo($("#svg"));
 }
 
 drawArrows = function() {
