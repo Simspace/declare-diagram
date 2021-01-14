@@ -61,7 +61,7 @@ xform h es = Node h ps ts
   (ps,ts) = partitionEithers es
 
 pItem :: Parser String
-pItem = lexeme $ some (alphaNumChar <|> char '-' <|> char ' ')
+pItem = lexeme $ some (noneOf ("\n" :: String))
 
 pTop :: Parser Tree
 pTop = L.nonIndented scn . L.indentBlock scn $ do
