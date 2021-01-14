@@ -96,22 +96,24 @@ drawArrow = function(a, b, label, klass) {
   }
   var desty = bo.offset().top + bo.height()/2;
 
-  var horizSlot = grabSlot(a, origy < desty ? 'down' : 'up');
+  var horizOrigSlot = grabSlot(a, origy < desty ? 'down' : 'up');
+  var horizDestSlot = grabSlot(b, origy < desty ? 'up' : 'down');
 
-  var sloty = origy + horizSlot * 6 * (origy < desty ? 1 : -1);
+  var sloty = origy + horizOrigSlot * 6 * (origy < desty ? 1 : -1);
+  var destSloty = desty + horizDestSlot * 6 * (origy < desty ? -1 : 1);
 
-  var colParent = ao.parents('.rows').last();
-  var depthOffset = colParent.offset().left + colParent.width() - origx;
+  var origParentCol = ao.parents('.rows').last();
+  var depthOffset = origParentCol.offset().left + origParentCol.width() - origx;
 
-  var vertSlot = grabSlot(colParent.attr('id'), 'singleton');
+  var vertSlot = grabSlot(origParentCol.attr('id'), 'singleton');
 
   var outx = origx + 6 * 6 - 6 * vertSlot + (origx < destx ? 40 : 24) + depthOffset;
 
-  var trix = (origx < destx ? destx - 10 : destx + 6);
+  var trix = (origx < destx ? destx - 11 : destx + 11);
 
-  var linepoints = `$${origx},$${sloty} $${outx},$${sloty} $${outx},$${desty} $${destx},$${desty}`;
+  var linepoints = `$${origx},$${sloty} $${outx},$${sloty} $${outx},$${destSloty} $${destx},$${destSloty}`;
 
-  var arrowpoints = `$${destx},$${desty} $${trix},$${desty + 5} $${trix},$${desty - 5}`;
+  var arrowpoints = `$${destx},$${destSloty} $${trix},$${destSloty + 4} $${trix},$${destSloty - 4}`;
 
   var g    = mkSVGEl("g", { class: klass });
   var line = mkSVGEl("polyline", { points: linepoints });
