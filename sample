@@ -2,10 +2,10 @@ Some Diagram
   class cols
   Area One
     class cols
-
     Sub Area One
       class rows
       Some Thing
+        arrow Other Other Thing
       Other Thing
         Component One
           arrow Baz
@@ -15,9 +15,8 @@ Some Diagram
         Component Two
           arrow Component Three
         Component Three
-      Foo
-      Foo
-
+      And Another
+        arrow Foo
     Sub Area Two
       class rows
       Other Thing
@@ -27,13 +26,7 @@ Some Diagram
         Barr
           class compact
           Bar
-          Bar
-          Bar
-          Bar
-
   Area Two
     class rows
-    Foo
-    Foo
     Foo
       Bar

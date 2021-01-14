@@ -72,9 +72,12 @@ drawConnector = function(n, a, b, label, klass) {
   }
   var desty = bo.offset().top + bo.height()/2;
 
-  var outx = origx + 43 + 6 * n;
+  var colParent = ao.parents('.rows').last();
+  var depthOffset = colParent.offset().left + colParent.width() - origx;
 
-  var trix = ((origx < destx) ? destx - 10 : destx + 6);
+  var outx = origx + 6 + 6 * n + (origx < destx ? 40 : 0) + depthOffset;
+
+  var trix = (origx < destx ? destx - 10 : destx + 6);
 
   var linepoints = `$${origx},$${origy} $${outx},$${origy} $${outx},$${desty} $${destx},$${desty}`;
 
