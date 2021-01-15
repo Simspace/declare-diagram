@@ -15,10 +15,14 @@ import qualified Data.Text as T
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Parsing
+import Data.Char (isAlphaNum)
+
+mkId :: String -> String
+mkId = filter (\x -> isAlphaNum x || (x == '-'))  . kebab
 
 treeHtml :: Tree -> H.Html
 treeHtml (Node labl props subs) =
-  H.div H.! A.id (fromString $ kebab labl)
+  H.div H.! A.id (fromString $ mkId labl)
         H.! A.class_ (fromString $ intercalate " " ("node" : classes))
     $ do
     H.p $ H.text (T.pack labl)
@@ -36,8 +40,8 @@ arrows (Node labl props subs) = arrs ++ concatMap arrows subs
   where
   arrs = flip mapMaybe props \case
     Arrow target lab klass ->
-      Just ( T.pack $ kebab labl
-           , T.pack $ kebab target
+      Just ( T.pack $ mkId labl
+           , T.pack $ mkId target
            , T.pack $ fromMaybe "" lab
            , T.pack $ fromMaybe "" klass
            )
@@ -140,14 +144,15 @@ connectElements = function(a, b, label, klass) {
 
   var forwardArr = origx < destx;
   var downArr = origy < desty;
+  var rightArr = destx > origx;
 
   var horizOrigSlot = grabSlot(a, downArr ? 'down' : 'up');
-  var horizDestSlot = grabSlot(b, downArr ? 'up' : 'down');
+  var horizDestSlot = grabSlot(b + (rightArr ? '-right' : ''), downArr ? 'up' : 'down');
 
   var sloty = origy + horizOrigSlot * 8 * (downArr ? 1 : -1);
   var destSloty = desty + horizDestSlot * 8 * (downArr ? -1 : 1);
 
-  var origParentCol = ao.parents('.rows').last();
+  var origParentCol = ao.parents('.cols > ul > li > div').first();
   var depthOffset = origParentCol.offset().left + origParentCol.width() - origx;
 
   var vertSlot = grabSlot(origParentCol.attr('id'), 'singleton');
