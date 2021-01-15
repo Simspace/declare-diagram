@@ -148,15 +148,15 @@ connectElements = function(a, b, label, klass) {
   var horizOrigSlot = grabSlot(a, downArr ? 'down' : 'up');
   var horizDestSlot = grabSlot(b, downArr ? 'up' : 'down');
 
-  var sloty = origy + horizOrigSlot * 6 * (downArr ? 1 : -1);
-  var destSloty = desty + horizDestSlot * 6 * (downArr ? -1 : 1);
+  var sloty = origy + horizOrigSlot * 8 * (downArr ? 1 : -1);
+  var destSloty = desty + horizDestSlot * 8 * (downArr ? -1 : 1);
 
   var origParentCol = ao.parents('.rows').last();
   var depthOffset = origParentCol.offset().left + origParentCol.width() - origx;
 
   var vertSlot = grabSlot(origParentCol.attr('id'), 'singleton');
 
-  var outx = origx + 6 * 6 - 6 * vertSlot + (forwardArr ? 40 : 24) + depthOffset;
+  var outx = origx + 6 * 8 - 8 * vertSlot + (forwardArr ? 40 : 24) + depthOffset;
 
   drawArrowf([origx,sloty], [outx,sloty], [outx,destSloty], [destx, destSloty], label, klass);
 }

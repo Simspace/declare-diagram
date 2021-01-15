@@ -40,7 +40,7 @@ p {
 .cols > ul {
   display: flex;
   flex-direction: row;
-  gap: 7em;
+  gap: 10em;
 }
 
 ul {
