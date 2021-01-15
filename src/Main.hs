@@ -50,13 +50,51 @@ pageHtml tree =
       H.link H.! A.rel "stylesheet" H.! A.href "styles.css"
       H.script H.! A.src "https://code.jquery.com/jquery-latest.min.js" $ pure ()
       H.script do
-        H.text $ [text|
-mkSVGEl = function (tag, attrs) {
-    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-    for (var k in attrs) {
-      el.setAttribute(k, attrs[k]);
+        H.text (jsBlob tree)
+    H.body H.! A.onload "drawArrows()" $ do
+      svg
+      treeHtml tree
+  where
+  svg = H.preEscapedToHtml ([text|
+<svg id="svg">
+</svg>
+        |] :: T.Text)
+
+main :: IO ()
+main = do
+  runParser parser "" <$> getContents >>= \case
+    Right tree -> do
+      let html = renderHtml . H.docTypeHtml . pageHtml $ tree
+      B.writeFile "out.html" (toStrict html)
+    Left e -> do
+      putStr $ show e
+
+jsBlob :: Tree -> T.Text
+jsBlob tree =
+  let conns = T.concat $ map (\(orig, targ, labl, klass) ->
+                [text| arrs.push(["${orig}", "${targ}", "${labl}", "${klass}"]); |]) (arrows tree)
+  in [text|
+drawArrows = function() {
+  var arrs = [];
+  ${conns}
+
+  // We want to draw the arrows that go to a forward column first to minimize overlap
+  var forwards = []; //arrows that go to a later column
+  var sames = []; //arows that stay in the same column or earlier
+  arrs.forEach (function(x) {
+    if ($('#' + x[0]).offset().left < $('#' + x[1]).offset().left) {
+      forwards.push(x);
+    } else {
+      sames.push(x);
     }
-    return el;
+  });
+
+  forwards.forEach(function (x) {
+    connectElements(x[0], x[1], x[2], x[3]);
+  });
+  sames.forEach(function (x) {
+    connectElements(x[0], x[1], x[2], x[3]);
+  });
 }
 
 var slots = {};
@@ -87,7 +125,7 @@ grabSlot = function(ident, suffix) {
 // a and b are node ids
 // label is a message to display on hover
 // klass is a css class to add to the arrow element
-drawArrow = function(a, b, label, klass) {
+connectElements = function(a, b, label, klass) {
   var ao = $('#' + a);
   var bo = $('#' + b);
 
@@ -100,32 +138,48 @@ drawArrow = function(a, b, label, klass) {
   }
   var desty = bo.offset().top + bo.height()/2;
 
-  var horizOrigSlot = grabSlot(a, origy < desty ? 'down' : 'up');
-  var horizDestSlot = grabSlot(b, origy < desty ? 'up' : 'down');
+  var forwardArr = origx < destx;
+  var downArr = origy < desty;
 
-  var sloty = origy + horizOrigSlot * 6 * (origy < desty ? 1 : -1);
-  var destSloty = desty + horizDestSlot * 6 * (origy < desty ? -1 : 1);
+  var horizOrigSlot = grabSlot(a, downArr ? 'down' : 'up');
+  var horizDestSlot = grabSlot(b, downArr ? 'up' : 'down');
+
+  var sloty = origy + horizOrigSlot * 6 * (downArr ? 1 : -1);
+  var destSloty = desty + horizDestSlot * 6 * (downArr ? -1 : 1);
 
   var origParentCol = ao.parents('.rows').last();
   var depthOffset = origParentCol.offset().left + origParentCol.width() - origx;
 
   var vertSlot = grabSlot(origParentCol.attr('id'), 'singleton');
 
-  var outx = origx + 6 * 6 - 6 * vertSlot + (origx < destx ? 40 : 24) + depthOffset;
+  var outx = origx + 6 * 6 - 6 * vertSlot + (forwardArr ? 40 : 24) + depthOffset;
 
-  var trix = (origx < destx ? destx - 11 : destx + 11);
+  drawArrowf([origx,sloty], [outx,sloty], [outx,destSloty], [destx, destSloty], label, klass);
+}
 
-  var linepoints = `$${origx},$${sloty} $${outx},$${sloty} $${outx},$${destSloty} $${destx},$${destSloty}`;
+mkSVGEl = function (tag, attrs) {
+    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (var k in attrs) {
+      el.setAttribute(k, attrs[k]);
+    }
+    return el;
+}
 
-  var arrowpoints = `$${destx},$${destSloty} $${trix},$${destSloty + 4} $${trix},$${destSloty - 4}`;
+drawArrowf = function(start, mid1, mid2, end, label, klass) {
+  var forwardArr = start[0] < end[0];
+  var trix = end[0] + (forwardArr ? -11 : 11);
 
-  var g    = mkSVGEl("g", { class: klass });
-  var line = mkSVGEl("polyline", { points: linepoints });
-  var tri  = mkSVGEl("polygon", { points: arrowpoints });
+  var g = mkSVGEl("g", { class: klass });
+  // This draws the first two segments of the arrow
+  var polyline = mkSVGEl("polyline", { points: `$${start[0]},$${start[1]} $${mid1[0]},$${mid1[1]} $${mid2[0]},$${mid2[1]}` });
+  // This draws the last segment, which we may need to 'ghost' (i.e. lower opacity) if it's long and potentially crosses other columns
+  var spanLine = mkSVGEl("line", { x1: mid2[0], y1: mid2[1], x2: end[0], y2: end[1], class: (end[0] - mid2[0] > 100 ? 'ghosted' : '') });
+  var tri  = mkSVGEl("polygon", { points: `$${end[0]},$${end[1]} $${trix},$${end[1] + 4} $${trix},$${end[1] - 4}` });
   var txt  = mkSVGEl("text", {x: 200, y: 40});
   $(txt).text(label);
 
-  g.appendChild(line);
+  g.appendChild(polyline);
+  g.appendChild(spanLine);
   g.appendChild(tri);
   g.appendChild(txt);
   var gel = $(g);
@@ -138,47 +192,4 @@ drawArrow = function(a, b, label, klass) {
 
   gel.appendTo($("#svg"));
 }
-
-drawArrows = function() {
-  var arrs = [];
-  ${conns}
-
-  // We want to draw the arrows that go to a forward column first to minimize overlap
-  var forwards = []; //arrows that go to a later column
-  var sames = []; //arows that stay in the same column or earlier
-  arrs.forEach (function(x) {
-    if ($('#' + x[0]).offset().left < $('#' + x[1]).offset().left) {
-      forwards.push(x);
-    } else {
-      sames.push(x);
-    }
-  });
-
-  forwards.forEach(function (x) {
-    drawArrow(x[0], x[1], x[2], x[3]);
-  });
-  sames.forEach(function (x) {
-    drawArrow(x[0], x[1], x[2], x[3]);
-  });
-}
-        |]
-    H.body H.! A.onload "drawArrows()" $ do
-      svg
-      treeHtml tree
-  where
-  svg = H.preEscapedToHtml ([text|
-<svg id="svg">
-</svg>
-        |] :: T.Text)
-  conns :: T.Text
-  conns = T.concat $ map (\(orig, targ, labl, klass) ->
-    [text| arrs.push(["${orig}", "${targ}", "${labl}", "${klass}"]); |]) (arrows tree)
-
-main :: IO ()
-main = do
-  runParser parser "" <$> getContents >>= \case
-    Right tree -> do
-      let html = renderHtml . H.docTypeHtml . pageHtml $ tree
-      B.writeFile "out.html" (toStrict html)
-    Left e -> do
-      putStr $ show e
+|]

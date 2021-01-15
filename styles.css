@@ -20,8 +20,6 @@ body {
 
 .node .node .node .node .node {
   background-color: #fff;
-  z-index: 2;
-  position: relative;
 }
 
 p {
@@ -86,9 +84,21 @@ li {
   fill: none;
 }
 
+#svg g line {
+  fill: none;
+}
+
 #svg g:hover {
   stroke: red;
   stroke-width: 4px;
+}
+
+.ghosted {
+  opacity: 0.2;
+}
+
+#svg g:hover .ghosted {
+  opacity: 1;
 }
 
 #svg g:hover polygon {
@@ -108,5 +118,9 @@ li {
 }
 
 .dotted polyline {
+  stroke-dasharray: 2;
+}
+
+.dotted line {
   stroke-dasharray: 2;
 }
