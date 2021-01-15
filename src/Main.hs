@@ -75,10 +75,6 @@ jsBlob tree =
                 [text| arrs.push(["${orig}", "${targ}", "${labl}", "${klass}"]); |]) (arrows tree)
   in [text|
 drawArrows = function() {
-  // Force svg layer to completely cover the rendered diagram
-  $('svg').first().width($('div').first().width());
-  $('svg').first().height($('div').first().height());
-
   var arrs = [];
   ${conns}
 
@@ -178,13 +174,13 @@ drawArrowf = function(start, mid1, mid2, end, label, klass) {
   // This draws the last segment, which we may need to 'ghost' (i.e. lower opacity) if it's long and potentially crosses other columns
   var spanLine = mkSVGEl("line", { x1: mid2[0], y1: mid2[1], x2: end[0], y2: end[1], class: (Math.abs(end[0] - mid2[0]) > 200 ? 'ghosted' : '') });
   var tri  = mkSVGEl("polygon", { points: `$${end[0]},$${end[1]} $${trix},$${end[1] + 4} $${trix},$${end[1] - 4}` });
-  var txt  = mkSVGEl("text", {x: 200, y: 40});
-  $(txt).text(label);
+
+  var txt  = mkSVGEl("text", {x: end[0], y: end[1] - 50, 'dominant-baseline': 'hanging'});
+  var rect = mkSVGEl("rect", {x: end[0] - 10, y: end[1] - 50 - 10});
 
   g.appendChild(polyline);
   g.appendChild(spanLine);
   g.appendChild(tri);
-  g.appendChild(txt);
   var gel = $(g);
 
   var colors = ['#962D40', '#AF4B47', '#C57544', '#888F41', '#61754A'];
@@ -194,5 +190,16 @@ drawArrowf = function(start, mid1, mid2, end, label, klass) {
   gel.children('polygon').css('fill', color);
 
   gel.appendTo($("#svg"));
+
+  if (label.length > 0) {
+    var textg = mkSVGEl("g", {class: 'label'} );
+    $(txt).text(label);
+    textg.appendChild(rect);
+    textg.appendChild(txt);
+    g.appendChild(textg);
+    $(rect).width($(txt)[0].getBBox().width + 20);
+    $(rect).height($(txt)[0].getBBox().height + 20);
+  }
+
 }
 |]

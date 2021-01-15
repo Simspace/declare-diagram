@@ -1,3 +1,8 @@
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
 body {
   font-family: sans-serif;
   background-color: #f5fafd;
@@ -69,8 +74,9 @@ li {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100vh;
+    /* width: 100vw; */
+    /* height: 100vh; */
+    overflow: visible;
   }
 
 #svg g {
@@ -107,16 +113,26 @@ li {
   fill: red;
 }
 
-#svg g text {
-  fill: none;
-  stroke: none;
-  stroke-width: 0px;
-  font: italic 20px sans-serif;
+#svg .label {
+  visibility: hidden;
 }
 
-#svg g:hover text {
+#svg .label text {
   fill: black;
+  stroke: none;
+  stroke-width: 1px;
+  font: italic 20px sans-serif;
+  font-weight: bold;
+}
+
+#svg .label rect {
+  fill: white;
   stroke: black;
+  stroke-width: 2px;
+}
+
+#svg g:hover .label {
+  visibility: visible;
 }
 
 .dotted polyline {
