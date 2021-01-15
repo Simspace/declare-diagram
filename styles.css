@@ -30,19 +30,21 @@ p {
 .rows > ul {
   display: flex;
   flex-direction: column;
+  margin: 1em;
 }
 
 .cols > ul > li {
-  margin: 1em 3em;
+  margin: 1em 0em;
 }
 
 .cols > ul {
   display: flex;
   flex-direction: row;
+  gap: 7em;
 }
 
 ul {
-  margin: 0;
+  margin: 1em;
   padding: 0;
 }
 

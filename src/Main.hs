@@ -177,7 +177,7 @@ drawArrowf = function(start, mid1, mid2, end, label, klass) {
   // This draws the first two segments of the arrow
   var polyline = mkSVGEl("polyline", { points: `$${start[0]},$${start[1]} $${mid1[0]},$${mid1[1]} $${mid2[0]},$${mid2[1]}` });
   // This draws the last segment, which we may need to 'ghost' (i.e. lower opacity) if it's long and potentially crosses other columns
-  var spanLine = mkSVGEl("line", { x1: mid2[0], y1: mid2[1], x2: end[0], y2: end[1], class: (end[0] - mid2[0] > 100 ? 'ghosted' : '') });
+  var spanLine = mkSVGEl("line", { x1: mid2[0], y1: mid2[1], x2: end[0], y2: end[1], class: (end[0] - mid2[0] > 200 ? 'ghosted' : '') });
   var tri  = mkSVGEl("polygon", { points: `$${end[0]},$${end[1]} $${trix},$${end[1] + 4} $${trix},$${end[1] - 4}` });
   var txt  = mkSVGEl("text", {x: 200, y: 40});
   $(txt).text(label);
