@@ -75,6 +75,10 @@ jsBlob tree =
                 [text| arrs.push(["${orig}", "${targ}", "${labl}", "${klass}"]); |]) (arrows tree)
   in [text|
 drawArrows = function() {
+  // Force svg layer to completely cover the rendered diagram
+  $('svg').first().width($('div').first().width());
+  $('svg').first().height($('div').first().height());
+
   var arrs = [];
   ${conns}
 
