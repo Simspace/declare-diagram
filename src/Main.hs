@@ -23,9 +23,9 @@ mkId = filter (\x -> isAlphaNum x || (x == '-'))  . kebab
 treeHtml :: Tree -> H.Html
 treeHtml (Node labl props subs) =
   H.div H.! A.id (fromString $ mkId labl)
-        H.! A.class_ (fromString $ intercalate " " ("node" : classes))
+        H.! A.class_ (fromString $ intercalate " " (primaryClass : classes))
     $ do
-    H.p $ H.text (T.pack labl)
+    when (labl /= ".") $ H.p $ H.text (T.pack labl) -- see note below about 'dot' nodes
     when (not . null $ subs) $
       H.ul $
         traverse_ (H.li . treeHtml) subs
@@ -34,6 +34,9 @@ treeHtml (Node labl props subs) =
   classes = flip mapMaybe props \case
     Class c -> Just c
     _ -> Nothing
+  -- Sometimes we add 'nodes' just to arrange in columns (by making the
+  -- label a single dot). But they shouldn't look like proper nodes.
+  primaryClass = if labl == "." then "empty" else "node"
 
 arrows :: Tree -> [(T.Text, T.Text, T.Text, T.Text)]
 arrows (Node labl props subs) = arrs ++ concatMap arrows subs
@@ -133,33 +136,39 @@ connectElements = function(a, b, label, klass) {
   var ao = $('#' + a);
   var bo = $('#' + b);
 
+  var aoPar = parent(ao);
+  var boPar = parent(bo);
+
+  var forwardArr = aoPar.offset().left < boPar.offset().left;
+
   var origx = ao.offset().left + ao.width();
   var origy = ao.offset().top + ao.height()/2;
 
   var destx = bo.offset().left;
-  if (!(origx < destx)) {
+  if (!forwardArr) {
     destx += bo.width();
   }
   var desty = bo.offset().top + bo.height()/2;
 
-  var forwardArr = origx < destx;
   var downArr = origy < desty;
-  var rightArr = destx > origx;
 
   var horizOrigSlot = grabSlot(a, downArr ? 'down' : 'up');
-  var horizDestSlot = grabSlot(b + (rightArr ? '-right' : ''), downArr ? 'up' : 'down');
+  var horizDestSlot = grabSlot(b + (!forwardArr ? '-right' : ''), downArr ? 'up' : 'down');
 
   var sloty = origy + horizOrigSlot * 8 * (downArr ? 1 : -1);
   var destSloty = desty + horizDestSlot * 8 * (downArr ? -1 : 1);
 
-  var origParentCol = ao.parents('.cols > ul > li > div').first();
-  var depthOffset = origParentCol.offset().left + origParentCol.width() - origx;
+  var depthOffset = aoPar.offset().left + aoPar.width() - origx;
 
-  var vertSlot = grabSlot(origParentCol.attr('id'), 'singleton');
+  var vertSlot = grabSlot(aoPar.attr('id'), forwardArr ? 'forward' : 'backward');
 
-  var outx = origx + 6 * 8 - 8 * vertSlot + (forwardArr ? 40 : 24) + depthOffset;
+  var outx = origx + 6 * 8 - 8 * vertSlot + (forwardArr ? 100 : 0) + depthOffset;
 
   drawArrowf([origx,sloty], [outx,sloty], [outx,destSloty], [destx, destSloty], label, klass);
+}
+
+parent = function(el) {
+  return el.parents('.cols > ul > li > div').first();
 }
 
 mkSVGEl = function (tag, attrs) {
